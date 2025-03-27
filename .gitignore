@@ -1,0 +1,11 @@
+# Pastas e arquivos do .NET que não precisam ir para o GitHub
+bin/
+obj/
+.vscode/
+.idea/
+*.user
+*.suo
+*.cache
+*.log
+Dockerfile
+.env
