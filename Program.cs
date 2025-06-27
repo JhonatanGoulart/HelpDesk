@@ -4,6 +4,7 @@ using HelpDeskPro.API.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Serilog;
 
 internal class Program
 {
@@ -11,19 +12,29 @@ internal class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // Obtém a chave secreta da configuração
+        // 🔵 Configuração do Serilog
+        builder.Host.UseSerilog((context, loggerConfig) =>
+        {
+            loggerConfig
+                .ReadFrom.Configuration(context.Configuration) // Lê as configs do appsettings.json
+                .WriteTo.Console()
+                .WriteTo.File("logs/log.txt",
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 7,
+                    restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information);
+        });
+
+
+        // 🔑 Obtém a chave secreta da configuração
         var secretKey = builder.Configuration["JwtSettings:SecretKey"];
-        
-        // Verifica se a chave secreta está configurada corretamente
         if (string.IsNullOrEmpty(secretKey) || secretKey.Length < 32)
         {
             throw new InvalidOperationException("JWT Secret Key não foi configurada. Verifique a configuração do arquivo appsettings.json.");
         }
 
-        // Converte a chave secreta para bytes
         var key = Encoding.ASCII.GetBytes(secretKey);
 
-        // Configuração de autenticação JWT
+        // 🔐 Autenticação JWT
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
@@ -39,6 +50,8 @@ internal class Program
                 };
             });
 
+
+        // 📑 Swagger com Bearer
         builder.Services.AddSwaggerGen(options =>
         {
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -50,7 +63,6 @@ internal class Program
                 In = ParameterLocation.Header,
                 Description = "Insira seu token JWT no formato: Bearer {seu_token}"
             });
-
             options.AddSecurityRequirement(new OpenApiSecurityRequirement
             {
                 {
@@ -62,39 +74,40 @@ internal class Program
                             Id = "Bearer"
                         }
                     },
-                    new string[] { }
+                    Array.Empty<string>()
                 }
             });
         });
 
+
         builder.Services.AddAuthorization();
 
-        // Configuração do EF Core com SQL Server
+        // 🗄️ EF Core
         builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-        // Adiciona serviços para os controllers
+        // 🎮 Controllers e Endpoints
         builder.Services.AddControllers();
-
-        // Configuração do Swagger com informações adicionais
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
         var app = builder.Build();
 
-        // Configuração do middleware do Swagger
+        // 🐞 Swagger em desenvolvimento
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "HelpDeskPro API v1");
-                c.RoutePrefix = string.Empty; // Swagger acessível na raiz da URL
+                c.RoutePrefix = string.Empty;
             });
         }
 
+        app.UseSerilogRequestLogging();
         app.UseAuthentication();
         app.UseAuthorization();
+
         app.MapControllers();
 
         app.Run();

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HelpDeskPro.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250310202250_CreateChamadosTable")]
-    partial class CreateChamadosTable
+    [Migration("20250625143247_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
